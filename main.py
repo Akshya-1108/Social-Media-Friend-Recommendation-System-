@@ -88,7 +88,7 @@ user_DOB = st.date_input(
 user_interest = st.text_input("What are your interests? (comma-separated):")
 
 countries = [country.name for country in pycountry.countries]
-user_country = st.selectbox("Select your Country", countries)
+user_country = st.selectbox("Select your Country", countries,index= None)
 
 if st.button("Recommend Friends"):
     if user_name and user_gender and user_interest:

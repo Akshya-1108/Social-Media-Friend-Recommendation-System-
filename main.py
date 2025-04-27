@@ -61,7 +61,7 @@ user_DOB = st.date_input(
 user_interest = st.text_input("What are your Interests (comma separated)?")
 
 countries = [country.name for country in pycountry.countries]
-user_country = st.selectbox("Select your Country:", countries)
+user_country = st.selectbox("Select your Country:", countries, index=None)
 
 # --- Recommend Function ---
 def recommend(user_name, user_gender, user_DOB, user_interest, user_country):

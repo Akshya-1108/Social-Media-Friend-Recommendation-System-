@@ -9,7 +9,9 @@ from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 # --- Setup page ---
-st.set_page_config(page_title="Friend Recommendation System", layout="centered")
+st.set_page_config(page_title="Friend Recommendation System",
+    page_icon="images/network.png",
+    layout="centered")
 st.title("Social Media Friend Recommendation System")
 
 # --- Caching the heavy operations ---

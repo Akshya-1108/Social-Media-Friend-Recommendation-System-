@@ -159,7 +159,6 @@ if st.button("Recommend Friends"):
 
         # Attractive UI Cards
         for friend in recommendations:
-            st.markdown(
                 st.markdown(
     f"""
     <div style="

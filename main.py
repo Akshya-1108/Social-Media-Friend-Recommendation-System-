@@ -159,61 +159,61 @@ if st.button("Recommend Friends"):
 
         # Attractive UI Cards
         for friend in recommendations:
-                st.markdown(
-    f"""
-    <div style="
-        background-color: #1e1e1e;
-        padding: 18px;
-        border-radius: 12px;
-        margin-bottom: 12px;
-        border: 1px solid #333;
-        display: flex;
-        align-items: center;
-        gap: 16px;
-    ">
-        
-        <!-- Avatar -->
-        <div style="
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #5f5cff, #a37eff);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 24px;
-            font-weight: 700;
-            color: white;
-            text-transform: uppercase;
-        ">
-            {friend['Name'][0]}
-        </div>
+            st.markdown(
+                f"""
+                <div style="
+                    background-color: #1e1e1e;
+                    padding: 18px;
+                    border-radius: 12px;
+                    margin-bottom: 12px;
+                    border: 1px solid #333;
+                    display: flex;
+                    align-items: center;
+                    gap: 16px;
+                ">
+                    
+                    <!-- Avatar -->
+                    <div style="
+                        width: 60px;
+                        height: 60px;
+                        border-radius: 50%;
+                        background: linear-gradient(135deg, #5f5cff, #a37eff);
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        font-size: 24px;
+                        font-weight: 700;
+                        color: white;
+                        text-transform: uppercase;
+                    ">
+                        {friend['Name'][0]}
+                    </div>
 
-        <!-- Name + User ID -->
-        <div style="flex-grow: 1;">
-            <p style="color: white; font-size: 18px; margin: 0; font-weight: 600;">
-                {friend['Name']}
-            </p>
-            <p style="color: #b5b5b5; font-size: 14px; margin: 4px 0 0;">
-                User ID: {friend['UserID']}
-            </p>
-        </div>
+                    <!-- Name + User ID -->
+                    <div style="flex-grow: 1;">
+                        <p style="color: white; font-size: 18px; margin: 0; font-weight: 600;">
+                            {friend['Name']}
+                        </p>
+                        <p style="color: #b5b5b5; font-size: 14px; margin: 4px 0 0;">
+                            User ID: {friend['UserID']}
+                        </p>
+                    </div>
 
-        <!-- Button -->
-        <div>
-            <a href="#" style="
-                text-decoration: none;
-                color: #ffffff;
-                background-color: #4f46e5;
-                padding: 8px 16px;
-                border-radius: 8px;
-                font-size: 14px;
-            ">
-                View Profile
-            </a>
-        </div>
+                    <!-- Button -->
+                    <div>
+                        <a href="#" style="
+                            text-decoration: none;
+                            color: #ffffff;
+                            background-color: #4f46e5;
+                            padding: 8px 16px;
+                            border-radius: 8px;
+                            font-size: 14px;
+                        ">
+                            View Profile
+                        </a>
+                    </div>
 
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+                </div>
+                """,
+                unsafe_allow_html=True
+            )

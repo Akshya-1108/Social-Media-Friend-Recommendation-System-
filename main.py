@@ -4,49 +4,76 @@ import numpy as np
 import pycountry
 import datetime
 from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.metrics.pairwise import linear_kernel
 
-# --- Page Setup ---
-st.set_page_config(page_title="Friend Recommendation System",
-                   page_icon="images/network.png",
-                   layout="centered")
+
+# ---------------------------------- PAGE SETUP ----------------------------------
+st.set_page_config(
+    page_title="Friend Recommendation System",
+    page_icon="📡",
+    layout="centered"
+)
 
 st.title("Social Media Friend Recommendation System")
 
-# --- Load and preprocess dataset ---
+
+# ---------------------------------- LOAD DATA ----------------------------------
 @st.cache_data
 def load_data():
     df = pd.read_csv("SMUsers.csv")
 
-    # Convert DOB → datetime
-    df['DOB'] = pd.to_datetime(df['DOB'], errors='coerce')
-    today = pd.to_datetime('today')
-    df['Age'] = round((today - df['DOB']).dt.days / 365).astype('Int64')
-    df.drop(columns=['DOB'], inplace=True)
+    # Validate dataset
+    required_cols = ["UserID", "Name", "Gender", "Country", "DOB", "Interests"]
+    for col in required_cols:
+        if col not in df.columns:
+            raise ValueError(f"Missing required column: {col}")
 
-    # Process interests
-    df['Interests'] = df['Interests'].str.split(",").apply(
-        lambda x: [i.strip().replace(" ", "") for i in x]
+    # DOB → Age
+    df["DOB"] = pd.to_datetime(df["DOB"], errors="coerce")
+    today = pd.to_datetime("today")
+    df["Age"] = ((today - df["DOB"]).dt.days / 365).round().astype("Int64")
+
+    # Handle missing
+    df["Gender"] = df["Gender"].fillna("Unknown")
+    df["Country"] = df["Country"].fillna("Unknown")
+    df["Age"] = df["Age"].fillna(0).astype(str)
+
+    # Clean Interests
+    df["Interests"] = (
+        df["Interests"]
+        .fillna("")
+        .astype(str)
+        .apply(lambda s: [
+            i.strip().replace(" ", "")
+            for i in s.split(",") if i.strip() != ""
+        ])
     )
 
-    df['Age'] = df['Age'].astype(str)
+    # Build Tags
+    df["Tags"] = (
+        df["Gender"] + " " +
+        df["Country"] + " " +
+        df["Age"] + " " +
+        df["Interests"].apply(lambda x: " ".join(x))
+    ).str.strip()
 
-    # Create tags for similarity computation
-    df['Tags'] = (
-        df['Gender'] + " " +
-        df['Country'] + " " +
-        df['Age'] + " " +
-        df['Interests'].apply(lambda x: " ".join(x))
-    )
+    # Remove empty tag rows
+    df = df[df["Tags"].str.len() > 0].copy()
 
-    # Final minimal structured dataset
-    final_df = df[['UserID', 'Name', 'Tags']].reset_index(drop=True)
+    final_df = df[["UserID", "Name", "Tags"]].reset_index(drop=True)
     return final_df
 
 
-final_df = load_data()
+# Load dataset
+try:
+    final_df = load_data()
+except Exception as e:
+    st.error("Failed to load SMUsers.csv.")
+    st.exception(e)
+    st.stop()
 
-# --- User Inputs ---
+
+# ---------------------------------- INPUT FIELDS ----------------------------------
 user_name = st.text_input("Enter your Name:").strip()
 
 user_gender = st.radio(
@@ -64,123 +91,123 @@ user_DOB = st.date_input(
 
 user_interest = st.text_input("What are your Interests (comma separated)?")
 
-countries = [country.name for country in pycountry.countries]
+countries = [c.name for c in pycountry.countries]
 user_country = st.selectbox("Select your Country:", countries, index=None)
 
-# --- Recommendation Function ---
-def recommend(user_name, user_gender, user_DOB, user_interest, user_country):
-    today = pd.to_datetime('today')
-    age = round((today - pd.to_datetime(user_DOB)).days / 365)
 
-    # Process user interests
+
+# ---------------------------------- SCALABLE RECOMMENDER ----------------------------------
+def recommend(user_name, user_gender, user_DOB, user_interest, user_country):
+
+    # Compute Age
+    today = pd.to_datetime("today")
+    age = int(round((today - pd.to_datetime(user_DOB)).days / 365))
+
+    # Clean interests
     interests_clean = [
         i.strip().replace(" ", "")
         for i in user_interest.split(",")
         if i.strip() != ""
     ]
 
-    # Construct dynamic user tag string
-    tag_string = f"{user_gender} {user_country} {age} {' '.join(interests_clean)}"
+    # User vector text
+    user_tag = f"{user_gender} {user_country} {age} {' '.join(interests_clean)}".strip()
 
-    # Create temporary dynamic user row
-    new_user_row = pd.DataFrame({
+    new_user_df = pd.DataFrame({
         "UserID": ["NEWUSER"],
         "Name": [user_name],
-        "Tags": [tag_string]
+        "Tags": [user_tag]
     })
 
-    # Append to dataset
-    temp_df = pd.concat([final_df, new_user_row], ignore_index=True)
-
-    # Vectorization
+    # Fit vectorizer on full dataset
     cv = CountVectorizer(max_features=5000, stop_words="english")
-    vectors = cv.fit_transform(temp_df['Tags']).toarray()
-    similarity = cosine_similarity(vectors)
+    full_vectors = cv.fit_transform(final_df["Tags"])  # sparse (100k x 5k)
 
-    # Compute similarity of new user
-    user_index = len(temp_df) - 1
-    distances = similarity[user_index]
+    # Transform only new user
+    user_vector = cv.transform(new_user_df["Tags"])  # sparse (1 x 5k)
 
-    recc_list = sorted(
-        list(enumerate(distances)),
-        key=lambda x: x[1],
-        reverse=True
-    )[1:6]  # exclude self
+    # Compute similarity: 1 × 100k (very small memory)
+    cosine_scores = linear_kernel(user_vector, full_vectors).flatten()
+
+    # Top 5 matches
+    top_indices = cosine_scores.argsort()[::-1][:5]
 
     results = []
-    for idx, score in recc_list:
-        friend = temp_df.iloc[idx][['UserID', 'Name']]
-        results.append(friend.to_dict())
+    for idx in top_indices:
+        person = final_df.iloc[idx][["UserID", "Name"]]
+        results.append(person.to_dict())
 
     return results
 
 
-# --- Run Recommendation ---
+
+# ---------------------------------- RUN BUTTON ----------------------------------
 if st.button("Recommend Friends"):
-    if user_name and user_gender and user_country and user_interest:
-        recommendations = recommend(
-            user_name, user_gender, user_DOB, user_interest, user_country
-        )
-
-        if recommendations:
-            st.success("Recommended Friends:")
-
-            # ===== Modern Profile Card UI =====
-            for friend in recommendations:
-                with st.container():
-                    st.markdown(
-                        f"""
-                        <div style="
-                            background-color: #1e1e1e;
-                            padding: 18px;
-                            border-radius: 12px;
-                            margin-bottom: 12px;
-                            border: 1px solid #333;
-                            display: flex;
-                            align-items: center;
-                        ">
-                            <div style="
-                                width: 60px;
-                                height: 60px;
-                                border-radius: 50%;
-                                background: linear-gradient(135deg, #5f5cff, #a37eff);
-                                display: flex;
-                                justify-content: center;
-                                align-items: center;
-                                font-size: 20px;
-                                color: white;
-                                margin-right: 15px;
-                                font-weight: bold;
-                            ">
-                                {friend['Name'][0].upper()}
-                            </div>
-
-                            <div style="flex-grow: 1;">
-                                <p style="color: white; font-size: 18px; margin: 0; font-weight: 600;">
-                                    {friend['Name']}
-                                </p>
-                                <p style="color: #b5b5b5; font-size: 14px; margin-top: 4px;">
-                                    User ID: {friend['UserID']}
-                                </p>
-                            </div>
-
-                            <div style="text-align: right;">
-                                <a style="
-                                    text-decoration: none;
-                                    color: #ffffff;
-                                    background-color: #4f46e5;
-                                    padding: 8px 16px;
-                                    border-radius: 8px;
-                                    font-size: 14px;
-                                " href="#">
-                                    View Profile
-                                </a>
-                            </div>
-                        </div>
-                        """,
-                        unsafe_allow_html=True
-                    )
-        else:
-            st.warning("No recommendations found.")
-    else:
+    if not (user_name and user_gender and user_country and user_interest):
         st.error("Please fill all fields before recommending!")
+    else:
+        try:
+            recommendations = recommend(
+                user_name, user_gender, user_DOB, user_interest, user_country
+            )
+        except Exception as e:
+            st.error("Error generating recommendations.")
+            st.exception(e)
+            st.stop()
+
+        st.success("Recommended Friends:")
+
+        # Attractive UI Cards
+        for friend in recommendations:
+            st.markdown(
+                f"""
+                <div style="
+                    background-color: #1e1e1e;
+                    padding: 18px;
+                    border-radius: 12px;
+                    margin-bottom: 12px;
+                    border: 1px solid #333;
+                    display: flex;
+                    align-items: center;
+                ">
+                    <div style="
+                        width: 60px;
+                        height: 60px;
+                        border-radius: 50%;
+                        background: linear-gradient(135deg, #5f5cff, #a37eff);
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        font-size: 20px;
+                        color: white;
+                        margin-right: 15px;
+                        font-weight: bold;
+                    ">
+                        {friend['Name'][0].upper()}
+                    </div>
+
+                    <div style="flex-grow: 1;">
+                        <p style="color: white; font-size: 18px; margin: 0; font-weight: 600;">
+                            {friend['Name']}
+                        </p>
+                        <p style="color: #b5b5b5; font-size: 14px; margin-top: 4px;">
+                            User ID: {friend['UserID']}
+                        </p>
+                    </div>
+
+                    <div style="text-align: right;">
+                        <a style="
+                            text-decoration: none;
+                            color: #ffffff;
+                            background-color: #4f46e5;
+                            padding: 8px 16px;
+                            border-radius: 8px;
+                            font-size: 14px;
+                        " href="#">
+                            View Profile
+                        </a>
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )

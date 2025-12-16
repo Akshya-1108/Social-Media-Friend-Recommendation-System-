@@ -17,7 +17,7 @@ This app uses basic **natural language processing (NLP)** and **cosine similarit
   - Interests (comma-separated)
 - ✨ Fast friend recommendations based on user profile.
 - 🌐 Optimized with caching to avoid redundant heavy calculations.
-- 📊 Uses `CountVectorizer` + `Cosine Similarity` for matching user interests.
+- 📊 Uses `CountVectorizer` + `Linear Kernel` for matching user interests.
 
 ---
 
@@ -85,8 +85,3 @@ streamlit run app.py
 ## License
 
 This project is open source and available under the [MIT License](LICENSE).
-
----
-
-**Made with ❤️ for social connection and machine learning exploration!**
-

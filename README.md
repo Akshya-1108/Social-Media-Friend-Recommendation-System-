@@ -28,7 +28,7 @@ This app uses basic **natural language processing (NLP)** and **cosine similarit
 3. **Cache Processing**: Heavy operations like vectorization and similarity matrix are cached.
 4. **User Input**: User fills in their profile details.
 5. **Generate Tags**: Create a profile tag string from user input.
-6. **Find Recommendations**: Calculate cosine similarity and recommend top 5 closest profiles.
+6. **Find Recommendations**: Calculate similarity score using `Linear Kernel` and recommend top 5 closest profiles.
 
 ---
 
